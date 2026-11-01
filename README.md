@@ -15,7 +15,14 @@ Microsoft C/C++.
 - One `nyra` language id and grammar for `.ny`, `.ni`, and `.nk`.
 - Transparent extension artwork and light/dark language file icons.
 - Nyra Slate Dark and Nyra Mist Light themes.
-- Analyzer diagnostics, hover, definition, and completion over stdio.
+- Analyzer diagnostics, documented hover, definition, ranked completion with
+  replacement ranges, and current-document Outline over stdio. Available
+  features follow the selected analyzer's capabilities; older SDKs keep their
+  existing feature set.
+- SDK status includes analyzer readiness/failure. Automatic crash recovery has
+  a bounded retry budget; explicit Restart Analyzer remains available.
+- Source/configuration watchers refresh dependent analysis. Unsaved YAML lint
+  profiles are synchronized independently, while YAML keeps its own providers.
 - **Nyra: Restart Analyzer** and **Nyra: Show Output** commands.
 - **Nyra: Debug Current File** saves the current `.ny`, builds with
   argument-vector options, creates a source-relative binary under

@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Show analyzer readiness/failure with the window SDK selection, bound automatic
+  crash retries and serialize explicit/configuration-triggered restarts.
+- Watch source, manifest, lock and SDK inputs; retire watchers on stop/failure.
+- Synchronize unsaved YAML profiles independently of Nyra language providers,
+  including current-buffer replay after explicit restart or crash recovery.
+- Support capability-negotiated document outlines, ranked completion replacement
+  ranges and documented hover from the native analyzer.
+
 - Highlight ordinary-string `#{expression}` interpolation with nested code,
   braces, strings, characters and comments; preserve escaped introducers.
 - Mark embedded expression scopes as Nyra code so quote pairing works inside

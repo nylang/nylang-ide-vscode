@@ -65,7 +65,12 @@ function appendOutput(current, chunk) {
   return text.length > limit ? text.slice(text.length - limit) : text;
 }
 
-function runProcess(command, args, cwd) {
+function buildEnvironment() {
+  const sdkPath = resolveSdkPath();
+  return sdkPath ? { ...process.env, NYRA_SDK_ROOT: sdkPath } : { ...process.env };
+}
+
+function runProcess(command, args, cwd, env) {
   return new Promise((resolve) => {
     let stdout = "";
     let stderr = "";
@@ -77,7 +82,7 @@ function runProcess(command, args, cwd) {
     };
     let child;
     try {
-      child = spawn(command, args, { cwd, windowsHide: true });
+      child = spawn(command, args, { cwd, windowsHide: true, env });
     } catch (error) {
       finish({ ok: false, message: String(error.message || error) });
       return;
@@ -97,7 +102,7 @@ function runProcess(command, args, cwd) {
 }
 
 async function runBuild(compilerPath, args, cwd) {
-  return runProcess(compilerPath, args, cwd);
+  return runProcess(compilerPath, args, cwd, buildEnvironment());
 }
 
 async function runDsymutil(programPath, cwd) {
@@ -109,7 +114,7 @@ async function runDsymutil(programPath, cwd) {
 
 function makeBuildTaskExecution(compilerPath, args, programPath, cwd) {
   if (process.platform !== "darwin") {
-    return new vscode.ProcessExecution(compilerPath, args, { cwd });
+    return new vscode.ProcessExecution(compilerPath, args, { cwd, env: buildEnvironment() });
   }
   // macOS linkers leave DWARF in object files; dsymutil packages it beside the
   // executable. Run both argv-safe processes inside one task so F5 waits for
@@ -125,7 +130,7 @@ function makeBuildTaskExecution(compilerPath, args, programPath, cwd) {
       close.fire(code);
     };
     const run = (command, commandArgs, next) => {
-      child = spawn(command, commandArgs, { cwd, windowsHide: true });
+      child = spawn(command, commandArgs, { cwd, windowsHide: true, env: buildEnvironment() });
       child.stdout.on("data", (chunk) => write.fire(String(chunk)));
       child.stderr.on("data", (chunk) => write.fire(String(chunk)));
       child.on("error", (error) => {

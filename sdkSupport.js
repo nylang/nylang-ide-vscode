@@ -13,6 +13,8 @@ function registerSdkSupport(vscode, context, { log, refresh }) {
   let installing;
   let disposed = false;
   let installController;
+  let analyzerState = "stopped";
+  let analyzerReason = "";
   const status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 20);
   status.command = "nyra.selectSdk";
   context.subscriptions.push(status, { dispose() { disposed = true; if (installController) installController.abort(); } });
@@ -21,7 +23,11 @@ function registerSdkSupport(vscode, context, { log, refresh }) {
     const root = resolveWindowSdkPath(vscode, false);
     const sdk = inspectSdk(root);
     status.text = sdk ? `Nyra ${sdk.version === "development" ? "SDK" : sdk.version}` : "$(warning) Nyra: Select SDK";
-    status.tooltip = root ? `Nyra SDK: ${root}\nClick to select or install an SDK.` : "Nyra SDK not found. Click to locate or install one.";
+    status.tooltip = (root ? `Nyra SDK: ${root}` : "Nyra SDK not found.")
+      + `\nAnalyzer: ${analyzerState}${analyzerReason ? ` — ${analyzerReason}` : ""}`
+      + "\nClick to select or install an SDK.";
+    if (analyzerState === "starting") status.text = `$(sync~spin) ${status.text}`;
+    else if (analyzerState === "failed" || analyzerState === "unavailable") status.text = `$(warning) ${status.text}`;
     status.show();
   }
 
@@ -116,7 +122,11 @@ function registerSdkSupport(vscode, context, { log, refresh }) {
   }
 
   updateStatus();
-  return { offerSetup, updateStatus };
+  return { offerSetup, updateStatus, setAnalyzerState(state, reason = "") {
+    analyzerState = state;
+    analyzerReason = reason;
+    updateStatus();
+  } };
 }
 
 module.exports = { registerSdkSupport };

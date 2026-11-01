@@ -9,6 +9,7 @@ const { resolveAnalyzerPath: resolveAnalyzerBinary } = require("./analyzerPath")
 const { resolveWindowSdkPath, hasSelectedSdk } = require("./windowToolchain");
 const { registerSdkSupport } = require("./sdkSupport");
 const { registerPackageCreation } = require("./packageCreation");
+const { ConfigDocumentSynchronization } = require("./configSynchronization");
 
 let client;
 let startPromise;
@@ -20,6 +21,19 @@ let observedSdkSetting = "";
 let observedAnalyzerSetting = "";
 let sdkSupport;
 let toolchainRefresh = Promise.resolve();
+let fileWatchers = [];
+let configDocuments;
+
+function disposeWatchers() {
+  if (configDocuments) configDocuments.dispose();
+  configDocuments = undefined;
+  for (const watcher of fileWatchers) watcher.dispose();
+  fileWatchers = [];
+}
+
+function analyzerState(state, reason = "") {
+  if (sdkSupport && sdkSupport.setAnalyzerState) sdkSupport.setAnalyzerState(state, reason);
+}
 
 function refreshToolchain(context, refreshSelection = false, forceRestart = false) {
   toolchainRefresh = toolchainRefresh.catch(() => {}).then(async () => {
@@ -65,6 +79,7 @@ async function startClient(context) {
     log(message);
     if (lastStartFailure !== message) void sdkSupport.offerSetup(message);
     lastStartFailure = message;
+    analyzerState("unavailable", message);
     return;
   }
   if (!fs.existsSync(analyzerPath)) {
@@ -72,22 +87,39 @@ async function startClient(context) {
     log(message);
     if (lastStartFailure !== message) void sdkSupport.offerSetup(message);
     lastStartFailure = message;
+    analyzerState("unavailable", message);
     return;
   }
-  lastStartFailure = "";
   log(`Starting analyzer; sdk=${sdkPath || "(unset)"}; executable=${analyzerPath}`);
 
   const configuredArguments = vscode.workspace.getConfiguration("nyra").get("analyzerArguments") || [];
   if (!Array.isArray(configuredArguments) || configuredArguments.some(value => typeof value !== "string")) {
-    throw new Error("nyra.analyzerArguments must be an array of strings.");
+    const message = "nyra.analyzerArguments must be an array of strings. Correct the workspace setting and restart the analyzer.";
+    log(message);
+    analyzerState("failed", message);
+    if (lastStartFailure !== message) vscode.window.showErrorMessage(message);
+    lastStartFailure = message;
+    return;
   }
   const serverOptions = {
     command: analyzerPath,
     args: [...configuredArguments],
     transport: TransportKind.stdio,
+    options: { env: sdkPath ? { ...process.env, NYRA_SDK_ROOT: sdkPath } : { ...process.env } },
   };
 
+  disposeWatchers();
+  if (vscode.workspace.createFileSystemWatcher) {
+    fileWatchers.push(vscode.workspace.createFileSystemWatcher("**/*.{ny,ni,nk,yaml,yml}"));
+    fileWatchers.push(vscode.workspace.createFileSystemWatcher("**/{package-lock.json,manifest.json}"));
+    if (sdkPath && vscode.RelativePattern) {
+      fileWatchers.push(vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(sdkPath, "**/*.{ny,ni,nk,yaml,yml,json}")));
+    }
+  }
   const clientOptions = {
+    connectionOptions: { maxRestartCount: 3 },
+    synchronize: { fileEvents: fileWatchers },
     documentSelector: [{ scheme: "file", language: "nyra" }],
     outputChannel: output,
   };
@@ -108,9 +140,23 @@ async function startClient(context) {
         return String(state);
       };
       log(`Analyzer state: ${stateName(event.oldState)} -> ${stateName(event.newState)}.`);
+      if (client === nextClient) {
+        const state = event.newState === 2 ? "ready" : event.newState === 3 ? "starting" : "failed";
+        analyzerState(state, state === "failed" ? "Analyzer stopped. See Nyra output or run Restart Analyzer." : "");
+        if (configDocuments) {
+          if (event.newState === 2) configDocuments.ready();
+          else configDocuments.suspend();
+        }
+      }
     });
   }
+  analyzerState("starting");
   startPromise = nextClient.start().then(() => {
+    if (client !== nextClient) return;
+    configDocuments = new ConfigDocumentSynchronization(vscode, nextClient, () => client === nextClient, log);
+    configDocuments.ready();
+    lastStartFailure = "";
+    analyzerState("ready");
     log("Analyzer client started.");
   }).catch(async (error) => {
     const message = `Nyra analyzer failed to start (${analyzerPath}): ${error && error.message ? error.message : error}`;
@@ -118,9 +164,12 @@ async function startClient(context) {
     if (stateListener) stateListener.dispose();
     stateListener = undefined;
     if (client === nextClient) client = undefined;
+    analyzerState("failed", message);
+    disposeWatchers();
+    const repeatedFailure = lastStartFailure === message;
     lastStartFailure = message;
     try { await nextClient.stop(); } catch (_stopError) { /* already stopped */ }
-    vscode.window.showErrorMessage(`${message}. See the Nyra output channel for details.`);
+    if (!repeatedFailure) vscode.window.showErrorMessage(`${message}. See the Nyra output channel for details.`);
   }).finally(() => {
     startPromise = undefined;
   });
@@ -132,6 +181,8 @@ async function stopClient() {
   // attempt before stopping, otherwise a settings change can race startup.
   const pendingStart = startPromise;
   if (pendingStart) await pendingStart;
+  disposeWatchers();
+  analyzerState("stopped");
   if (!client) {
     return;
   }
@@ -149,7 +200,7 @@ async function stopClient() {
 
 async function activate(context) {
   output = vscode.window.createOutputChannel("Nyra");
-  context.subscriptions.push(output);
+  context.subscriptions.push(output, { dispose: disposeWatchers });
   observedSdkSetting = currentSetting("sdkPath");
   observedAnalyzerSetting = currentSetting("analyzerPath");
   sdkSupport = registerSdkSupport(vscode, context, { log, refresh: () => refreshToolchain(context) });
@@ -162,8 +213,7 @@ async function activate(context) {
 
   context.subscriptions.push(
     vscode.commands.registerCommand("nyra.restartAnalyzer", async () => {
-      await stopClient();
-      await startClient(context);
+      await refreshToolchain(context, false, true);
       if (client) vscode.window.showInformationMessage("Nyra analyzer restarted.");
     })
   );

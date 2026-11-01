@@ -21,8 +21,8 @@
     "vscode": "^1.85.0"
   },
   "scripts": {
-    "check": "node --check extension.js && node --check debugSupport.js && node --check analyzerPath.js && node --check windowToolchain.js && node --check sdkDiscovery.js && node --check sdkInstaller.js && node --check sdkSupport.js && node --check packageCreation.js",
-    "test": "npm run check && node scripts/smoke-analyzer-path.js && node scripts/smoke-extension-lifecycle.js && node scripts/smoke-debug-support.js && node scripts/smoke-sdk-setup.js && node scripts/smoke-package-creation.js && node scripts/smoke-interpolation-grammar.js",
+    "check": "node --check extension.js && node --check debugSupport.js && node --check analyzerPath.js && node --check windowToolchain.js && node --check sdkDiscovery.js && node --check sdkInstaller.js && node --check sdkSupport.js && node --check packageCreation.js && node --check configSynchronization.js",
+    "test": "npm run check && node scripts/smoke-analyzer-path.js && node scripts/smoke-extension-lifecycle.js && node scripts/smoke-debug-support.js && node scripts/smoke-sdk-setup.js && node scripts/smoke-package-creation.js && node scripts/smoke-interpolation-grammar.js && node scripts/smoke-config-synchronization.js",
     "test:grammar": "node scripts/smoke-interpolation-grammar.js"
   },
   "categories": [

@@ -17,25 +17,36 @@ const registeredCommands = new Map();
 const configListeners = [];
 const workspaceListeners = [];
 const clients = [];
+const watchers = [];
+const errors = [];
+const statusItems = [];
 
 function makeFolder(root) {
   return { name: path.basename(root), uri: { fsPath: root } };
 }
+const analyzerName = process.platform === "win32" ? "nyra-analyzer.exe" : "nyra-analyzer";
+
 function makeSdk(name) {
   const root = path.join(temp, name);
   fs.mkdirSync(path.join(root, "bin"), { recursive: true });
-  fs.writeFileSync(path.join(root, "bin", "nyra-analyzer"), "fake executable");
+  fs.writeFileSync(path.join(root, "bin", analyzerName), "fake executable");
   return root;
 }
 
 const sdkA = makeSdk("sdk-a");
 const sdkB = makeSdk("sdk-b");
 const sdkC = makeSdk("sdk-c");
-const missingAnalyzer = path.join(temp, "missing", "nyra-analyzer");
+const missingAnalyzer = path.join(temp, "missing", analyzerName);
 const vscodeMock = {
   StatusBarAlignment: { Left: 1 },
+  RelativePattern: class { constructor(base, pattern) { this.base = base; this.pattern = pattern; } },
   workspace: {
     workspaceFolders: [makeFolder(sdkA), makeFolder(sdkB)],
+    createFileSystemWatcher(pattern) {
+      const watcher = { pattern, disposed: false, dispose() { this.disposed = true; } };
+      watchers.push(watcher);
+      return watcher;
+    },
     getConfiguration: () => ({ get: (key) => settings[key] || "" }),
     onDidChangeConfiguration(listener) {
       configListeners.push(listener);
@@ -47,10 +58,14 @@ const vscodeMock = {
     },
   },
   window: {
-    createStatusBarItem: () => ({ show() {}, dispose() {} }),
+    createStatusBarItem: () => {
+      const item = { show() {}, dispose() {} };
+      statusItems.push(item);
+      return item;
+    },
     createOutputChannel: () => ({ appendLine: (line) => outputLines.push(line), show() {} }),
     showWarningMessage: (message) => warnings.push(String(message)),
-    showErrorMessage: (message) => { throw new Error(`Unexpected error notification: ${message}`); },
+    showErrorMessage: (message) => errors.push(String(message)),
     showInformationMessage: (message) => infos.push(String(message)),
   },
   commands: {
@@ -106,11 +121,20 @@ async function run() {
   try {
     await extension.activate(context);
     assert.strictEqual(clients.length, 1);
-    assert.strictEqual(clients[0].serverOptions.command, path.join(sdkA, "bin", "nyra-analyzer"));
+    assert.strictEqual(clients[0].serverOptions.command, path.join(sdkA, "bin", analyzerName));
     assert.deepStrictEqual(clients[0].serverOptions.args, settings.analyzerArguments);
+    assert.strictEqual(clients[0].serverOptions.options.env.NYRA_SDK_ROOT, sdkA);
     assert.strictEqual(clients[0].clientOptions.documentSelector[0].language, "nyra");
     assert.strictEqual(clients[0].clientOptions.workspaceFolder, undefined, "LanguageClient must track all workspace folders");
     assert.match(outputLines.join("\n"), /Analyzer state: starting -> running/);
+    assert.strictEqual(clients[0].clientOptions.connectionOptions.maxRestartCount, 3);
+    assert.strictEqual(clients[0].clientOptions.synchronize.fileEvents.length, 3);
+    assert.match(statusItems[0].tooltip, /Analyzer: ready/);
+    clients[0].fireState(2, 1);
+    assert.match(statusItems[0].tooltip, /Analyzer: failed/);
+    clients[0].fireState(1, 3);
+    clients[0].fireState(3, 2);
+    assert.match(statusItems[0].tooltip, /Analyzer: ready/);
 
     // Adding another root leaves the window's first-folder SDK stable. The
     // language client receives workspace-folder changes without a process restart.
@@ -130,8 +154,8 @@ async function run() {
     settings.sdkPath = sdkB;
     await configListeners[0](configChange("nyra.sdkPath"));
     assert.strictEqual(clients.length, 2);
-    assert.strictEqual(clients[1].serverOptions.command, path.join(sdkB, "bin", "nyra-analyzer"));
-    const customAnalyzer = path.join(sdkC, "bin", "nyra-analyzer");
+    assert.strictEqual(clients[1].serverOptions.command, path.join(sdkB, "bin", analyzerName));
+    const customAnalyzer = path.join(sdkC, "bin", analyzerName);
     settings.analyzerPath = customAnalyzer;
     await configListeners[0](configChange("nyra.analyzerPath"));
     assert.strictEqual(clients.length, 3);
@@ -154,10 +178,21 @@ async function run() {
     settings.analyzerPath = "";
     await configListeners[0](configChange("nyra.analyzerPath"));
     assert.strictEqual(clients.length, 5);
-    assert.strictEqual(clients[4].serverOptions.command, path.join(sdkA, "bin", "nyra-analyzer"));
+    assert.strictEqual(clients[4].serverOptions.command, path.join(sdkA, "bin", analyzerName));
 
+    const initialWatchers = watchers.slice();
+    settings.analyzerArguments = [42];
+    await configListeners[0](configChange("nyra.analyzerArguments"));
+    await configListeners[0](configChange("nyra.analyzerArguments"));
+    assert.strictEqual(clients.length, 5, "invalid arguments must not create a client");
+    assert.strictEqual(errors.length, 1, "repeat configuration failures must not repeat popups");
+    assert.ok(initialWatchers.every(watcher => watcher.disposed));
+    settings.analyzerArguments = ["--stdio"];
+    await configListeners[0](configChange("nyra.analyzerArguments"));
+    assert.strictEqual(clients.length, 6);
     await extension.deactivate();
-    assert.strictEqual(clients[4].stops, 1, "deactivation must stop the final client");
+    assert.strictEqual(clients[5].stops, 1, "deactivation must stop the final client");
+    assert.ok(watchers.every(watcher => watcher.disposed), "retired clients must release file watchers");
     assert.match(outputLines.join("\n"), /Analyzer client stopped/);
     console.log("smoke-extension-lifecycle: ok (startup, workspace selection, settings, retry, restart, shutdown)");
   } finally {

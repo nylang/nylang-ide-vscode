@@ -37,11 +37,11 @@ const roots = [
   { uri: { fsPath: "/workspace/first" } },
   { uri: { fsPath: "/workspace/second" } },
 ];
-assert.strictEqual(resolveSdkPath({ sdkPath: " /custom/sdk ", workspaceFolders: roots }), "/custom/sdk");
-assert.strictEqual(resolveSdkPath({ workspaceFolders: roots }), "/workspace/first");
+assert.strictEqual(resolveSdkPath({ sdkPath: " /custom/sdk ", workspaceFolders: roots }), path.resolve("/custom/sdk"));
+assert.strictEqual(resolveSdkPath({ workspaceFolders: roots }), path.resolve("/workspace/first"));
 assert.strictEqual(resolveSdkPath({ workspaceFolders: [] }), "");
 // SDK selection is window-scoped and does not follow a changing active editor.
-assert.strictEqual(resolveSdkPath({ workspaceFolders: roots }), "/workspace/first");
+assert.strictEqual(resolveSdkPath({ workspaceFolders: roots }), path.resolve("/workspace/first"));
 
 const override = "/opt/custom/nyra-analyzer";
 assert.strictEqual(
@@ -50,7 +50,7 @@ assert.strictEqual(
     sdkPath: "/repo",
     platform: "darwin",
   }),
-  override
+  path.resolve(override)
 );
 
 assert.strictEqual(
@@ -58,7 +58,7 @@ assert.strictEqual(
     analyzerPath: "  /custom/nyra-analyzer  ",
     sdkPath: "/ignored",
   }),
-  "/custom/nyra-analyzer"
+  path.resolve("/custom/nyra-analyzer")
 );
 
 console.log("smoke-analyzer-path: ok (window SDK precedence; default bin/nyra-analyzer)");
