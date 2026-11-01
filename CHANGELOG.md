@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Highlight ordinary-string `#{expression}` interpolation with nested code,
+  braces, strings, characters and comments; preserve escaped introducers.
+- Mark embedded expression scopes as Nyra code so quote pairing works inside
+  interpolation while nested literal strings keep their string token type.
+
 ## 0.24.8
 
 - Add native Create Package and Initialize Package commands and folder actions.

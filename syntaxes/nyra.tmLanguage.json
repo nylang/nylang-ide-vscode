@@ -42,9 +42,35 @@
             {
               "name": "constant.character.escape.nyra",
               "match": "\\\\."
-            }
+            },
+            { "include": "#interpolation" }
           ]
         }
+      ]
+    },
+    "interpolation": {
+      "name": "meta.interpolation.nyra",
+      "contentName": "meta.embedded.expression.nyra",
+      "begin": "#\\{",
+      "beginCaptures": {
+        "0": { "name": "punctuation.section.interpolation.begin.nyra" }
+      },
+      "end": "\\}",
+      "endCaptures": {
+        "0": { "name": "punctuation.section.interpolation.end.nyra" }
+      },
+      "patterns": [
+        { "include": "#interpolation-braces" },
+        { "include": "$self" }
+      ]
+    },
+    "interpolation-braces": {
+      "name": "meta.braces.nyra",
+      "begin": "\\{",
+      "end": "\\}",
+      "patterns": [
+        { "include": "#interpolation-braces" },
+        { "include": "$self" }
       ]
     },
     "chars": {
