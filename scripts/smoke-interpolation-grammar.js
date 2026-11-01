@@ -40,6 +40,18 @@ async function main() {
     at(line, "return", "meta.embedded.expression.nyra", false);
     at(line, "return", "keyword.control.nyra");
   }
+  // Convenience operators use the same embedded-code grammar as normal source.
+  for (const line of [
+    'builder..First()..Second();',
+    'item?.Refresh();',
+    'item!.Refresh();',
+    'let text = "#{item!..First()..Second()}";',
+  ]) {
+    const operator = line.includes("..") ? ".." : line.includes("?.") ? "?." : "!";
+    at(line, operator, "keyword.operator.nyra");
+    at(line, line.includes("First") ? "First" : "Refresh", "meta.embedded.expression.nyra", line.includes("#{"),
+      0, textmate.INITIAL);
+  }
   const nested = 'let text = "#{Point{ x: 42, text: "} #{true}" }.x /* } */}"; return 0;';
   at(nested, "42", "constant.numeric.integer.nyra");
   at(nested, "true", "constant.language.boolean.nyra");

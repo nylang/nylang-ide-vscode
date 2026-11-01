@@ -23,6 +23,11 @@ Microsoft C/C++.
   a bounded retry budget; explicit Restart Analyzer remains available.
 - Source/configuration watchers refresh dependent analysis. Unsaved YAML lint
   profiles are synchronized independently, while YAML keeps its own providers.
+- Cascade, checked optional assertion and null-aware highlighting, including
+  interpolation expressions. With a 1.0.8-capable development analyzer,
+  completion/hover/definition follow original cascade receivers, optional
+  payloads and valid presence guards. These source features require the matching
+  development compiler; installing this extension does not add them to SDK 1.0.5.
 - **Nyra: Restart Analyzer** and **Nyra: Show Output** commands.
 - **Nyra: Debug Current File** saves the current `.ny`, builds with
   argument-vector options, creates a source-relative binary under

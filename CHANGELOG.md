@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Highlight cascade (`..`) and null-aware (`?.`) operators, including inside
+  string interpolation. Native analyzer builds with the 1.0.8 feature set
+  provide payload-aware `!.` / `?.` members, original-receiver cascade members
+  and branch-local optional presence queries; published SDK 1.0.5 does not.
+
 - Show analyzer readiness/failure with the window SDK selection, bound automatic
   crash retries and serialize explicit/configuration-triggered restarts.
 - Watch source, manifest, lock and SDK inputs; retire watchers on stop/failure.
