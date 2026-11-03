@@ -34,6 +34,9 @@ async function main() {
     assertions++;
     return result;
   }
+  at("constexpr init(Value) Make(value: int32) : value = value {}", "constexpr", "storage.modifier.nyra");
+  at("constexpr init(Value) Make(value: int32) : value = value {}", "Make", "entity.name.function.nyra");
+  at("@override method(Value) Read() -> int32 { return super.Read(); }", "override", "entity.name.function.nyra", false);
   for (let slashes = 0; slashes <= 4; slashes++) {
     const line = `let text = "${"\\".repeat(slashes)}#{42}"; return 0;`;
     at(line, "42", "constant.numeric.integer.nyra", slashes % 2 === 0);

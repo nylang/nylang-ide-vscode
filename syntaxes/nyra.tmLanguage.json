@@ -130,7 +130,7 @@
         },
         {
           "name": "storage.modifier.nyra",
-          "match": "\\b(pub|static|const|readonly|enable)\\b"
+          "match": "\\b(pub|static|const|constexpr|readonly|enable)\\b"
         },
         {
           "name": "storage.type.declaration.nyra",
@@ -210,7 +210,7 @@
       "patterns": [
         {
           "name": "meta.function.nyra",
-          "match": "\\b(func|factory)\\s*(\\([^\\)]*\\))?\\s*([A-Za-z_][A-Za-z0-9_]*)",
+          "match": "\\b(func|factory|init)\\s*(\\([^\\)]*\\))?\\s*([A-Za-z_][A-Za-z0-9_]*)",
           "captures": {
             "1": { "name": "storage.type.declaration.function.nyra" },
             "3": { "name": "entity.name.function.nyra" }
