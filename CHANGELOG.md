@@ -1,11 +1,11 @@
 # Changelog
 
-## Unreleased
+## 0.24.9
 
-- Highlight cascade (`..`) and null-aware (`?.`) operators, including inside
-  string interpolation. Native analyzer builds with the 1.0.8 feature set
-  provide payload-aware `!.` / `?.` members, original-receiver cascade members
-  and branch-local optional presence queries; published SDK 1.0.5 does not.
+- Highlight constexpr initializers, override metadata, cascade (`..`) and
+  null-aware (`?.`) operators. The SDK 1.1.2 analyzer provides payload-aware
+  `!.` / `?.` members, original-receiver cascade members and branch-local
+  optional presence queries.
 
 - Show analyzer readiness/failure with the window SDK selection, bound automatic
   crash retries and serialize explicit/configuration-triggered restarts.

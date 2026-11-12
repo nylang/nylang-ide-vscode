@@ -23,17 +23,21 @@ Microsoft C/C++.
   a bounded retry budget; explicit Restart Analyzer remains available.
 - Source/configuration watchers refresh dependent analysis. Unsaved YAML lint
   profiles are synchronized independently, while YAML keeps its own providers.
-- Cascade, checked optional assertion and null-aware highlighting, including
-  interpolation expressions. With a 1.0.8-capable development analyzer,
-  completion/hover/definition follow original cascade receivers, optional
-  payloads and valid presence guards. These source features require the matching
-  development compiler; installing this extension does not add them to SDK 1.0.5.
+- Highlights cascade, checked optional assertion, null-aware operators, nested
+  interpolation, constexpr initializers and override metadata. With Nyra SDK
+  1.1.2, completion, hover and definition follow cascade receivers, optional
+  payloads and valid presence guards.
 - **Nyra: Restart Analyzer** and **Nyra: Show Output** commands.
 - **Nyra: Debug Current File** saves the current `.ny`, builds with
   argument-vector options, creates a source-relative binary under
   `.nyra-debug/`, generates a dSYM on macOS, and starts the selected debugger.
 - **Nyra: Initialize Debug Workspace** writes or merges build tasks and native
   launch configurations for the active workspace folder.
+
+## Install the extension
+
+Download the VSIX from [GitHub Releases](https://github.com/nylang/nylang-ide-vscode/releases)
+and choose **Extensions: Install from VSIX...** in VS Code.
 
 ## Prerequisites
 
@@ -63,7 +67,11 @@ downloaded with progress and cancellation, verified against its SHA-256 and
 extracted into a temporary directory. Manifest and tool hashes are also checked
 before the SDK is moved into place and selected. Existing installations are
 never overwritten; cancellation/failure removes partial staging files.
-Selection starts the analyzer without requiring a window reload.
+Selection starts the analyzer without requiring a window reload. The 1.1.2
+stable download index covers macOS arm64, macOS x86_64 and Windows x86_64.
+For Linux x86_64, download the cross-compiled candidate from the
+[SDK release](https://github.com/nylang/sdk/releases/tag/v1.1.2), extract it,
+and choose its root with **Nyra: Select SDK**.
 
 Use the SDK root, not its `bin` folder. Downloaded tools run on the extension
 host (including Remote SSH/WSL), not necessarily the local desktop. Installation

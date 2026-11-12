@@ -2,7 +2,7 @@
   "name": "nyra-lang",
   "displayName": "NyraLang",
   "description": "Syntax, themes, LSP, and debug for Nyra (.ny / .ni / .nk)",
-  "version": "0.24.8",
+  "version": "0.24.9",
   "publisher": "nyra",
   "main": "./extension.js",
   "activationEvents": [
